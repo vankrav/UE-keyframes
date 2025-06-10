@@ -1,13 +1,18 @@
 import unreal
 import csv
+import os
 
 # Настройки секвенции
 SEQUENCE_PATH = "/Game/Sequences/LightAnimation"  # Путь к секвенции в UE
 FPS = 60  # Кадров в секунду
 NUM_LIGHTS = 64  # Количество светильников
-CSV_PATH = "DMX64.csv"  # Путь к CSV файлу
+# Получаем абсолютный путь к CSV файлу
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(SCRIPT_DIR, "DMX64.csv")  # Путь к CSV файлу
+INTENSITY_MULTIPLIER = 5000.0  # Множитель интенсивности
 
 def import_dmx_to_sequencer():
+    print(f"Attempting to read CSV file from: {CSV_PATH}")
     # Загружаем или создаем секвенцию
     sequence = unreal.load_asset(SEQUENCE_PATH, unreal.LevelSequence)
     if not sequence:
@@ -58,7 +63,7 @@ def import_dmx_to_sequencer():
             frame_time = unreal.FrameNumber(frame_num)
             intensity_channel.add_key(
                 frame_time,
-                brightness * 5000.0,  # Умножаем на 5000, так как Intensity в UE обычно использует большие значения
+                brightness * INTENSITY_MULTIPLIER,  # Умножаем на 5000, так как Intensity в UE обычно использует большие значения
                 0.0,  # субкадр
                 unreal.MovieSceneTimeUnit.DISPLAY_RATE
             )
