@@ -7,9 +7,10 @@ SEQUENCE_PATH = "/Game/Sequences/LightAnimation"  # Путь к секвенци
 FPS = 60  # Кадров в секунду
 NUM_LIGHTS = 64  # Количество светильников
 FIRST_LIGHT_INDEX = 0  # Начальный индекс светильников
-# Получаем абсолютный путь к CSV файлу
+# Получаем абсолютный путь к файлам
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = os.path.join(SCRIPT_DIR, "DMX64.csv")  # Путь к CSV файлу
+DMX_PATH = os.path.join(SCRIPT_DIR, "New_Animation.chan")  # Путь к исходному DMX файлу
+CSV_PATH = os.path.join(SCRIPT_DIR, "New_Animation.csv")  # Путь к CSV файлу
 INTENSITY_MULTIPLIER = 1300.0  # Множитель интенсивности
 
 def log(message):
@@ -17,8 +18,58 @@ def log(message):
     unreal.log(f"[DMX Import] {message}")
     print(f"[DMX Import] {message}")
 
+def convert_dmx_to_csv(input_file, output_file):
+    """Конвертирует DMX файл в CSV формат"""
+    log(f"Converting DMX file: {input_file} -> {output_file}")
+    
+    # Читаем входной файл
+    with open(input_file, 'r') as f:
+        lines = f.readlines()
+    
+    # Подготавливаем заголовки для CSV
+    headers = ['frame'] + [f'light_{i}' for i in range(64)]  # Добавляем столбец frame
+    
+    # Открываем выходной CSV файл
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)  # Записываем заголовки
+        
+        # Обрабатываем каждую строку
+        frame_number = 0  # Счетчик кадров
+        for line in lines:
+            # Пропускаем комментарии и пустые строки
+            if line.startswith('#') or not line.strip():
+                continue
+                
+            # Разбиваем строку на значения
+            values = line.strip().split()
+            
+            # Конвертируем значения из 0-255 в 0-1
+            normalized_values = [float(val) / 255.0 for val in values]
+            
+            # Добавляем номер кадра в начало строки
+            row_data = [frame_number] + normalized_values
+            
+            # Записываем данные в CSV
+            writer.writerow(row_data)
+            
+            frame_number += 1  # Увеличиваем счетчик кадров
+    
+    log(f"Conversion completed! Created {frame_number} frames")
+
 def import_dmx_to_sequencer():
     log("Starting DMX import process...")
+    
+    # Проверяем, нужно ли конвертировать DMX файл
+    if not os.path.exists(CSV_PATH) or os.path.getmtime(DMX_PATH) > os.path.getmtime(CSV_PATH):
+        log("CSV file doesn't exist or DMX file is newer. Converting...")
+        if not os.path.exists(DMX_PATH):
+            log(f"ERROR: DMX file not found: {DMX_PATH}")
+            return None
+        convert_dmx_to_csv(DMX_PATH, CSV_PATH)
+    else:
+        log("Using existing CSV file")
+    
     log(f"CSV file path: {CSV_PATH}")
     
     # Загружаем или создаем секвенцию
